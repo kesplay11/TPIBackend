@@ -3,7 +3,7 @@ const db = require('../../../conexion');
 
 
 
-router.post('/personas', function(req,res,next){
+router.post('/', function(req,res,next){
     const { documento, rol_id, equipo_id, correo, anio_escolar, fecha_de_creacion, persona_contraseña, nombre, borrado_logico } = req.body;
 
     const hash_contraseña = persona_contraseña;
@@ -23,7 +23,7 @@ router.post('/personas', function(req,res,next){
     })
 });
 
-router.get('/personas', function(req, res, next){
+router.get('/', function(req, res, next){
     const {busqueda} = req.query;
     let sql = "SELECT * FROM personas";
     let busquedaParcial = busqueda;
@@ -51,10 +51,15 @@ router.put("/:persona_id", function(req, res, next){
     SET documento = ?, rol_id = ?, equipo_id = ?, correo = ?, nombre = ?, borrado_logico = ?
     WHERE persona_id = ?
     `
-    db.query(sql, persona)
+    db.query(sql, valores)
     .then(() => {
         res.status(200).send("Usuario actualizado")
     })
 })
+
+//crear otra ruta aparte para el "eliminar" (borrado logico)
+// router.put("/eliminar/:persona_id", function(req, res, next){
+
+// })
 
 module.exports = router;

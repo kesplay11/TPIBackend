@@ -16,17 +16,19 @@ router.post("/", function(req, res, next){
     })
 })
 
+router.get("/personaBorradas", function(req, res, next){
+
+})
+
 router.get("/", function(req, res, next){
     const { busqueda } = req.query;
-    let sql = "SELECT * FROM equipos"
-    let busquedaParcial = busqueda;
-    console.log(busquedaParcial);
+    let sql = "SELECT * FROM equipos WHERE borrado_logico = 0"
+    let valores = [];
     if(busqueda){
-        sql += " WHERE nombre like ?";
-        busquedaParcial = `%${busqueda}%`;
-        console.log(sql);
+        sql += " AND nombre like ?";
+        valores.push(`%${busqueda}%`);
     }
-    db.query(sql,[busquedaParcial])
+    db.query(sql,valores)
     .then(([rows,fields]) => {
         console.log("test1");
         res.json(rows);
@@ -40,15 +42,15 @@ router.get("/", function(req, res, next){
 router.put("/:equipo_id", function(req, res, next){
     const { equipo_id } = req.params;
 
-    const { nombre, borrado_logico } = req.body;
+    const { nombre } = req.body;
 
     const sql = `
     UPDATE equipos
-    SET nombre = ?, borrado_logico = ? 
+    SET nombre = ?
     WHERE equipo_id = ?
     `;
 
-    db.query(sql, [nombre, borrado_logico, equipo_id])
+    db.query(sql, [nombre, equipo_id])
     .then(() => {
         res.status(200).send("Equipo actualizado correctamente");
     })
@@ -57,6 +59,8 @@ router.put("/:equipo_id", function(req, res, next){
         res.status(500).send("Ocurrio un error al actualizar el equipo");
     })
 })
+
+//router.put("/eliminar/:equipo_id",function(req, res, next){})
 
 
 //ordenar como lo vamos a explicar, que vamos a explicar si nos vamos a presentar primero, explicar porque elegimos, jueves exposición final

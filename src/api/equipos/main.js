@@ -16,13 +16,10 @@ router.post("/", function(req, res, next){
     })
 })
 
-router.get("/personaBorradas", function(req, res, next){
-
-})
 
 router.get("/", function(req, res, next){
     const { busqueda } = req.query;
-    let sql = "SELECT * FROM equipos WHERE borrado_logico = 0"
+    let sql = "SELECT * FROM equipos WHERE borrado_logico = 0" 
     let valores = [];
     if(busqueda){
         sql += " AND nombre like ?";
@@ -57,6 +54,21 @@ router.put("/:equipo_id", function(req, res, next){
     .catch((error) => {
         console.error(error);
         res.status(500).send("Ocurrio un error al actualizar el equipo");
+    })
+})
+
+router.put("/estado/:equipo_id", function(req, res, next){
+    const { equipo_id } = req.params;
+    const { borrado_logico } = req.body;
+    let sql = "UPDATE equipos SET borrado_logico = ? WHERE equipo_id = ?";
+    db.query(sql,[borrado_logico, equipo_id])
+    .then(() => {
+        const mensaje = borrado_logico == 1 ? `El equipo se "borro" correctamente` : `El equipo se reactivo`;
+        res.status(200).send(mensaje)
+    })
+    .catch((error) => {
+        console.error(error);
+        res.status(500).send("Ocurrio un error");
     })
 })
 

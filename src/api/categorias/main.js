@@ -1,8 +1,6 @@
 const router = require("express").Router();
 const db = require("../../../conexion");
 
-
-
 router.post("/", function(req, res, next){
     const { nombre } = req.body;
     let sql = "INSERT INTO categorias (nombre)";
@@ -20,7 +18,7 @@ router.post("/", function(req, res, next){
 
 router.get("/", function(req, res, next){
     const { busqueda } = req.query;
-    let sql = "SELECT * FROM categorias";
+    let sql = "SELECT * FROM categorias WHERE borrado_logico = 0";
     let busquedaParcial = busqueda;
     if(busqueda){
         sql += " WHERE nombre like ?"
@@ -46,6 +44,25 @@ router.put("/:categoria_id",function(req, res, next){
     `;
     db.query(sql,[nombre, categoria_id])
     .then(() => {
+        res.status(200).send("Se actualizo la categoria correctamente");
+    })
+    .catch((error) => {
+        console.error(error);
+        res.status(500).send("Ocurrio un erro al actualizar la categoria");
+    })
+})
+
+router.put("/estado/:categoria_id",function(req, res, next){
+    const { categoria_id } = req.params;
+    const { borrado_logico } = req.body;
+    let sql = `
+    UPDATE categorias
+    SET borrado_logico = ?
+    WHERE categoria_id = ?
+    `;
+    db.query(sql,[borrado_logico, categoria_id])
+    .then(() => {
+        const mensaje = borrado_logico == 1 ? `Se 'borro' correctamne` : `Se reactivo la categoria`;
         res.status(200).send("Se actualizo la categoria correctamente");
     })
     .catch((error) => {

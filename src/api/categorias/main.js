@@ -17,14 +17,10 @@ router.post("/", function(req, res, next){
 });
 
 router.get("/", function(req, res, next){
-    const { busqueda } = req.query;
-    let sql = "SELECT * FROM categorias WHERE borrado_logico = 0";
-    let busquedaParcial = busqueda;
-    if(busqueda){
-        sql += " WHERE nombre like ?"
-        busquedaParcial = `%${busqueda}%`;
-    }
-    db.query(sql,[busquedaParcial])
+    const { borrado } = req.query;
+    let valores = [ borrado === "1" ? 1 : 0]
+    let sql = "SELECT * FROM categorias WHERE borrado_logico = ?";
+    db.query(sql,valores)
     .then(([rows, fields]) => {
         res.json(rows);
     })

@@ -18,16 +18,12 @@ router.post("/", function(req, res, next){
 
 
 router.get("/", function(req, res, next){
-    const { busqueda } = req.query;
-    let sql = "SELECT * FROM equipos WHERE borrado_logico = 0" 
-    let valores = [];
-    if(busqueda){
-        sql += " AND nombre like ?";
-        valores.push(`%${busqueda}%`);
-    }
+    const {borrado} = req.query;
+    let sql = "SELECT * FROM equipos WHERE borrado_logico = ?";
+    let valores = [borrado === "1" ? 1 : 0];
+    
     db.query(sql,valores)
     .then(([rows,fields]) => {
-        console.log("test1");
         res.json(rows);
     })
     .catch((error) => {

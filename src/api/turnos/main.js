@@ -1,8 +1,9 @@
 const router = require("express").Router();
 const db = require("../../../conexion");
+const verifyRole = require('../../middlewares/verifyRole')
 
 // 🟢 Crear turno
-router.post("/", function (req, res, next) {
+router.post("/", verifyRole([1]), function (req, res, next) {
 const { nombre, hora_inicio, hora_fin } = req.body;
 let sql = `
     INSERT INTO turnos (nombre, hora_inicio, hora_fin)
@@ -40,7 +41,7 @@ db.query(sql, parametros)
 });
 
 // 🟠 Actualizar turno por ID
-router.put("/:turno_id", function (req, res, next) {
+router.put("/:turno_id", verifyRole([1]), function (req, res, next) {
 const { turno_id } = req.params;
 const { nombre, hora_inicio, hora_fin } = req.body;
 
@@ -61,7 +62,7 @@ db.query(sql, [nombre, hora_inicio, hora_fin, turno_id])
 });
 
 // 🔴 Cambiar estado lógico (borrado / reactivado)
-router.put("/estado/:turno_id", function (req, res, next) {
+router.put("/estado/:turno_id", verifyRole([1]), function (req, res, next) {
 const { turno_id } = req.params;
 const { borrado_logico } = req.body;
 

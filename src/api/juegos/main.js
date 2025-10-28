@@ -1,8 +1,8 @@
 const router = require('express').Router();
 const db = require("../../../conexion");
+const verifyRole = require('../../middlewares/verifyRole')
 
-
-router.post("/", function (req, res, next) {
+router.post("/", verifyRole([1]), function (req, res, next) {
 const { persona_id, categoria_id, turno_id, estado_juego_id, fecha_de_creacion, visible, rondas } = req.body;
 
 db.getConnection()
@@ -100,7 +100,7 @@ router.get("/", function(req, res, next){
 })
 
 
-router.put("/:juego_id", function (req, res, next) {
+router.put("/:juego_id", verifyRole([1]), function (req, res, next) {
     const { juego_id } = req.params;
     const { categoria_id, turno_id } = req.body;
 
@@ -121,7 +121,7 @@ router.put("/:juego_id", function (req, res, next) {
 });
 
 
-router.put("/estado/:juego_id", function (req, res, next) {
+router.put("/estado/:juego_id", verifyRole([1]), function (req, res, next) {
     const { juego_id } = req.params;
     const { estado_juego_id } = req.body;
 
@@ -142,7 +142,7 @@ router.put("/estado/:juego_id", function (req, res, next) {
 });
 
 
-router.put("/visible/:juego_id", function (req, res, next) {
+router.put("/visible/:juego_id", verifyRole([1]), function (req, res, next) {
     const { juego_id } = req.params;
     const { visible } = req.body;
 
@@ -165,7 +165,7 @@ router.put("/visible/:juego_id", function (req, res, next) {
 /* ================================================
    4️⃣ BORRAR (lógico) UN JUEGO
 ================================================ */
-router.put("/borrar/:juego_id", function (req, res, next) {
+router.put("/borrar/:juego_id", verifyRole([1]), function (req, res, next) {
     const { juego_id } = req.params;
     const { borrado_logico } = req.body;
 
@@ -188,7 +188,7 @@ router.put("/borrar/:juego_id", function (req, res, next) {
 
 
 
-router.post("/:juego_id/rondas", function (req, res, next) {
+router.post("/:juego_id/rondas", verifyRole([1]), function (req, res, next) {
     const { juego_id } = req.params;
     const { estado_ronda_id, numero_ronda, equipos } = req.body;
 
@@ -233,7 +233,7 @@ router.post("/:juego_id/rondas", function (req, res, next) {
 });
 
 //"editar" los equipos de una ronda
-router.put("/ronda/:juego_ronda_id", async (req, res) => {
+router.put("/ronda/:juego_ronda_id", verifyRole([1]), async (req, res) => {
 const { juego_ronda_id } = req.params;
 const { equipos } = req.body;
 
@@ -266,7 +266,7 @@ try {
 }
 });
 
-router.put("/estado-ronda/:juego_ronda_id", function (req, res, next) {
+router.put("/estado-ronda/:juego_ronda_id", verifyRole([1]),function (req, res, next) {
     const { juego_ronda_id } = req.params;
     const { estado_ronda_id } = req.body;
 
@@ -287,7 +287,7 @@ router.put("/estado-ronda/:juego_ronda_id", function (req, res, next) {
 });
 
 
-router.put("/borrar-ronda/:juego_ronda_id", function (req, res, next) {
+router.put("/borrar-ronda/:juego_ronda_id", verifyRole([1]), function (req, res, next) {
     const { juego_ronda_id } = req.params;
     const { borrado_logico } = req.body;
 

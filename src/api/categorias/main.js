@@ -1,7 +1,8 @@
 const router = require("express").Router();
 const db = require("../../../conexion");
+const verifyRole = require('../../middlewares/verifyRole')
 
-router.post("/", function(req, res, next){
+router.post("/", verifyRole([1]), function(req, res, next){
     const { nombre } = req.body;
     let sql = "INSERT INTO categorias (nombre)";
     sql += "VALUES (?)"
@@ -30,7 +31,7 @@ router.get("/", function(req, res, next){
     })
 })
 
-router.put("/:categoria_id",function(req, res, next){
+router.put("/:categoria_id", verifyRole([1]),function(req, res, next){
     const { categoria_id } = req.params;
     const { nombre } = req.body;
     let sql = `
@@ -48,7 +49,7 @@ router.put("/:categoria_id",function(req, res, next){
     })
 })
 
-router.put("/estado/:categoria_id",function(req, res, next){
+router.put("/estado/:categoria_id", verifyRole([1]), function(req, res, next){
     const { categoria_id } = req.params;
     const { borrado_logico } = req.body;
     let sql = `

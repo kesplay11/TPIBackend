@@ -1,7 +1,8 @@
 const router = require('express').Router();
 const db = require('../../../conexion');
+const verifyRole = require('../../middlewares/verifyRole')
 
-router.post("/", function(req, res, next){
+router.post("/", verifyRole([1]), function(req, res, next){
     const { nombre } = req.body;
     let sql = "INSERT INTO equipos (nombre)";
     sql += " VALUES (?)"
@@ -32,7 +33,7 @@ router.get("/", function(req, res, next){
     })
 })
 
-router.put("/:equipo_id", function(req, res, next){
+router.put("/:equipo_id", verifyRole([1]), function(req, res, next){
     const { equipo_id } = req.params;
 
     const { nombre } = req.body;
@@ -53,7 +54,7 @@ router.put("/:equipo_id", function(req, res, next){
     })
 })
 
-router.put("/estado/:equipo_id", function(req, res, next){
+router.put("/estado/:equipo_id", verifyRole([1]), function(req, res, next){
     const { equipo_id } = req.params;
     const { borrado_logico } = req.body;
     let sql = "UPDATE equipos SET borrado_logico = ? WHERE equipo_id = ?";

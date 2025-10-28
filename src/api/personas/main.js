@@ -1,13 +1,13 @@
 const router = require('express').Router();
 const db = require('../../../conexion');
+const verifyRole = require('../../middlewares/verifyRole')
 
 
-router.post('/', function(req,res,next){
-    const { documento, rol_id, equipo_id, correo, anio_escolar, fecha_de_creacion, persona_contraseña, nombre } = req.body;
-    const hash_contraseña = persona_contraseña;
-    const valores = [ documento, rol_id, equipo_id, correo, anio_escolar, fecha_de_creacion, hash_contraseña, nombre ]
-    let sql = "INSERT INTO personas (documento, rol_id, equipo_id, correo, anio_escolar, fecha_de_creacion, hash_contraseña, nombre)";
-    sql += "VALUES (?,?,?,?,?,?,?,?,?)"
+router.post('/', verifyRole([3]), function(req,res,next){
+    const { documento, rol_id, equipo_id, correo, anio_escolar, fecha_de_creacion, nombre } = req.body;
+    const valores = [ documento, rol_id, equipo_id, correo, anio_escolar, fecha_de_creacion, nombre ]
+    let sql = "INSERT INTO personas (documento, rol_id, equipo_id, correo, anio_escolar, fecha_de_creacion, nombre)";
+    sql += "VALUES (?,?,?,?,?,?,?)"
     db.query(sql,valores)
     .then(() => {
         res.status(201).send('Guardado');
@@ -16,6 +16,33 @@ router.post('/', function(req,res,next){
         console.error(error);
         res.status(500).send('Ocurrio un error');
     })
+});
+
+
+router.get("/verificar/:dni", verifyRole([1]), function(req, res, next) {
+const { dni } = req.params;
+
+db.query("SELECT * FROM personas WHERE documento = ?", [dni])
+    .then(([rows]) => {
+    if (rows.length === 0) {
+        return res.status(200).json({ message: 'Ningún usuario registrado con ese DNI' });
+    }
+
+    const persona = rows[0];
+
+    if (persona.borrado_logico === 0) {
+        return res.status(200).json({ message: 'La persona ya está registrada en el sistema.' });
+    } else {
+        return res.status(200).json({
+        message: 'La persona existe pero está dada de baja. ¿Desea reactivarla?',
+        puedeReactivar: true
+        });
+    }
+    })
+    .catch(error => {
+    console.error('Error al verificar el DNI:', error);
+    res.status(500).json({ error: 'Error al verificar el DNI' });
+    });
 });
 
 router.get('/', function(req, res, next){
@@ -71,7 +98,7 @@ router.put("/:persona_id", function(req, res, next){
 })
 
 //crear otra ruta aparte para el "eliminar" (borrado logico)
-router.put("/estado/:persona_id", function(req, res, next){
+router.put("/estado/:persona_id", verifyRole([1]), function(req, res, next){
     const { persona_id } = req.params;
     const { borrado_logico } = req.body;
     let sql = `

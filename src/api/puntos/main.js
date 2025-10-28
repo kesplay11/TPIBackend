@@ -1,7 +1,8 @@
 const router = require('express').Router();
 const db = require("../../../conexion");
+const verifyRole = require('../../middlewares/verifyRole')
 
-router.post("/", function(req, res, next){
+router.post("/", verifyRole([1, 2]), function(req, res, next){
     const { equipo_id, juego_ronda_id, capitan_id, puntos, fecha_de_creacion } = req.body;
     let sql = "INSERT INTO puntos (equipo_id, juego_ronda_id, capitan_id, puntos, fecha_de_creacion) VALUES ( ?, ?, ?, ?, ?)";
 
@@ -16,7 +17,7 @@ router.post("/", function(req, res, next){
 
 })
 
-router.put("/:punto_id", function (req, res, next) {
+router.put("/:punto_id", verifyRole([1]), function (req, res, next) {
     const { punto_id } = req.params;
     const { puntos } = req.body;
 
@@ -36,7 +37,7 @@ router.put("/:punto_id", function (req, res, next) {
         });
 });
 
-router.put("/estado/:punto_id", async function (req, res, next) {
+router.put("/estado/:punto_id", verifyRole([1]), async function (req, res, next) {
     const { punto_id } = req.params;
     const { estado_punto_id } = req.body;
 

@@ -11,7 +11,7 @@ function verifyToken(req, res, next) {
   if (!token) return res.status(403).json({ error: "Formato de token inválido" });
 
   try {
-    console.log("TOKEN_SECRET:", TOKEN_SECRET);
+    // console.log("TOKEN_SECRET:", TOKEN_SECRET);
     const verificacion = verificarToken(token, TOKEN_SECRET);
 
     if (verificacion?.data) {

@@ -1,13 +1,39 @@
 const router = require('express').Router();
 const db = require('../../../conexion');
-const verifyRole = require('../../middlewares/verifyRole')
+const verifyRole = require('../../middlewares/verifyRole');
+const { sendEmail } = require('../../services/nodemailer/nodemailer');
+const { hashPass } = require("@damianegreco/hashpass");
+
+// router.post('/mailtest', verifyRole([1]), async (req, res) => {
+//     try {
+//         const { to, subject, message } = req.body;
+
+//         // Validar datos básicos
+//         if (!to || !subject || !message) {
+//             return res.status(400).json({ error: 'Faltan campos requeridos: to, subject o message' });
+//         }
+
+//         // Enviar correo
+//         await sendEmail(to, subject, message);
+
+//         res.status(200).json({ success: true, message: 'Correo enviado correctamente' });
+//     } catch (error) {
+//         console.error('Error enviando correo:', error);
+//         res.status(500).json({ error: 'Error al enviar el correo' });
+//     }
+// });
 
 
-router.post('/', verifyRole([3]), function(req,res,next){
+
+
+
+router.post('/', verifyRole([1]), function(req,res,next){
     const { documento, rol_id, equipo_id, correo, anio_escolar, fecha_de_creacion, nombre } = req.body;
-    const valores = [ documento, rol_id, equipo_id, correo, anio_escolar, fecha_de_creacion, nombre ]
-    let sql = "INSERT INTO personas (documento, rol_id, equipo_id, correo, anio_escolar, fecha_de_creacion, nombre)";
-    sql += "VALUES (?,?,?,?,?,?,?)"
+
+    let hash_contraseña = hashPass(documento);
+    const valores = [ documento, rol_id, equipo_id, correo, anio_escolar, fecha_de_creacion, nombre, hash_contraseña ]
+    let sql = "INSERT INTO personas (documento, rol_id, equipo_id, correo, anio_escolar, fecha_de_creacion, nombre, hash_contraseña)";
+    sql += "VALUES (?,?,?,?,?,?,?,?)"
     db.query(sql,valores)
     .then(() => {
         res.status(201).send('Guardado');
@@ -16,6 +42,32 @@ router.post('/', verifyRole([3]), function(req,res,next){
         console.error(error);
         res.status(500).send('Ocurrio un error');
     })
+});
+
+router.post('/mail', verifyRole([1]), async (req, res, next) => {
+  const { documento, rol_id, equipo_id, correo, anio_escolar, fecha_de_creacion, nombre } = req.body;
+  const valores = [documento, rol_id, equipo_id, correo, anio_escolar, fecha_de_creacion, nombre];
+
+  const sql = `
+    INSERT INTO personas (documento, rol_id, equipo_id, correo, anio_escolar, fecha_de_creacion, nombre)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `;
+
+  try {
+    await db.query(sql, valores);
+    await sendEmail(
+      correo,
+      'Bienvenido a Intertecnos',
+      `<h1>Hola ${nombre} 👋</h1>
+       <p>Tu cuenta fue creada. Haz clic en el siguiente enlace para establecer tu contraseña:</p>
+       <a href="https://intertecnos.app/api/public/login">Configurar contraseña</a>`
+    );
+
+    res.status(201).send('Persona creada y correo enviado');
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Error al crear persona o enviar correo');
+  }
 });
 
 
@@ -113,6 +165,24 @@ router.put("/estado/:persona_id", verifyRole([1]), function(req, res, next){
     })
     .catch((error) => {
         console.error(error);
+        res.status(500).send("Ocurrio un error");
+    })
+})
+
+router.put('/:persona_id/set-password', function(req, res, next){
+    const { persona_id } = req.params;
+    const { pass } = req.body;
+
+    let hash_contraseña = hashPass(pass);
+
+    let sql = "UPDATE personas SET hash_contraseña = ? WHERE persona_id = ?"
+
+    db.query(sql, [hash_contraseña, persona_id])
+    .then(() => {
+        res.status(201).send("Contraseña hasheada guardada");
+    })
+    .catch((err) => {
+        console.error(err);
         res.status(500).send("Ocurrio un error");
     })
 })

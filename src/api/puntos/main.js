@@ -17,25 +17,41 @@ router.post("/", verifyRole([1, 2]), function(req, res, next){
 
 })
 
-router.put("/:punto_id", verifyRole([1]), function (req, res, next) {
+router.put("/:punto_id", verifyRole([1, 2]), async function (req, res, next) {
     const { punto_id } = req.params;
     const { puntos } = req.body;
+    const rol = req.user.rol_id; // suponiendo que tu verifyRole agrega los datos del usuario
+    try {
+        // 1️⃣ Obtenemos el estado actual del punto
+        const [rows] = await db.query("SELECT estado_punto_id FROM puntos WHERE punto_id = ?", [punto_id]);
+        if (!rows.length) return res.status(404).send("El punto no existe");
 
-    const sql = `
-        UPDATE puntos
-        SET puntos = ?
-        WHERE punto_id = ?
-    `;
+        const estadoActual = rows[0].estado_punto_id;
 
-    db.query(sql, [puntos, punto_id])
-        .then(() => {
-            res.status(200).send("El punto fue actualizado correctamente");
-        })
-        .catch((error) => {
-            console.error(error);
-            res.status(500).send("Ocurrió un error al actualizar el punto");
-        });
+        // 2️⃣ Lógica por rol y estado
+        if (rol === 2) {
+            // 🧩 Rol 2 = Capitán
+            if (estadoActual === 3) { 
+                // 3 = rechazado (por ejemplo)
+                await db.query("UPDATE puntos SET puntos = ?, estado_punto_id = 1 WHERE punto_id = ?", [puntos, punto_id]);
+                return res.status(200).send("El punto fue reenviado y quedó en estado pendiente nuevamente");
+            } else {
+                return res.status(403).send("No podés modificar un punto que no esté rechazado");
+            }
+        }
+
+        if (rol === 1) {
+            // 🧩 Rol 1 = Coordinador (puede editar en cualquier caso)
+            await db.query("UPDATE puntos SET puntos = ? WHERE punto_id = ?", [puntos, punto_id]);
+            return res.status(200).send("El punto fue actualizado correctamente por el coordinador");
+        }
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("Ocurrió un error al actualizar el punto");
+    }
 });
+
 
 router.put("/estado/:punto_id", verifyRole([1]), async function (req, res, next) {
     const { punto_id } = req.params;

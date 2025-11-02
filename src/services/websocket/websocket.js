@@ -11,7 +11,7 @@ function initWebSocket(server) {
     });
 
     io.on("connection", (socket) => {
-    console.log(`Usuario conectafo: ${socket.id}`);
+    console.log(`Usuario conectado sii: ${socket.id}`);
 
     socket.on("disconnect", () => {
         console.log(`Usuario desconectado: ${socket.id}`);

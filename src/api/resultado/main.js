@@ -26,7 +26,7 @@ router.get("/", function (req, res, next) {
 
     db.query(sql, [estado_juego_id])
         .then(([rows, fields]) => {
-            res.json(rows);
+            return res.json(rows);
         })
         .catch((error) => {
             console.error("Error al obtener los resultados:", error);

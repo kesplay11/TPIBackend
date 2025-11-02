@@ -21,3 +21,25 @@
 // })
 
 // module.exports = router;
+
+
+
+
+// router.post('/mailtest', verifyRole([1]), async (req, res) => {
+//     try {
+//         const { to, subject, message } = req.body;
+
+//         // Validar datos básicos
+//         if (!to || !subject || !message) {
+//             return res.status(400).json({ error: 'Faltan campos requeridos: to, subject o message' });
+//         }
+
+//         // Enviar correo
+//         await sendEmail(to, subject, message);
+
+//         res.status(200).json({ success: true, message: 'Correo enviado correctamente' });
+//     } catch (error) {
+//         console.error('Error enviando correo:', error);
+//         res.status(500).json({ error: 'Error al enviar el correo' });
+//     }
+// });

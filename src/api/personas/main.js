@@ -4,28 +4,6 @@ const verifyRole = require('../../middlewares/verifyRole');
 const { sendEmail } = require('../../services/nodemailer/nodemailer');
 const { hashPass } = require("@damianegreco/hashpass");
 
-// router.post('/mailtest', verifyRole([1]), async (req, res) => {
-//     try {
-//         const { to, subject, message } = req.body;
-
-//         // Validar datos básicos
-//         if (!to || !subject || !message) {
-//             return res.status(400).json({ error: 'Faltan campos requeridos: to, subject o message' });
-//         }
-
-//         // Enviar correo
-//         await sendEmail(to, subject, message);
-
-//         res.status(200).json({ success: true, message: 'Correo enviado correctamente' });
-//     } catch (error) {
-//         console.error('Error enviando correo:', error);
-//         res.status(500).json({ error: 'Error al enviar el correo' });
-//     }
-// });
-
-
-
-
 
 router.post('/', verifyRole([1]), function(req,res,next){
     const { documento, rol_id, equipo_id, correo, anio_escolar, fecha_de_creacion, nombre } = req.body;
@@ -108,7 +86,7 @@ router.get('/', function(req, res, next){
     db.query(sql,valores)
     .then(([rows, fields]) => {
         console.log("test 1");
-        res.json(rows);
+        return res.json(rows);
     })
     .catch((error) => {
         console.error(error);
@@ -123,7 +101,7 @@ router.get("/:documento", function(req,res,next){
     db.query(sql, [documento])
     .then(([rows, fields]) => {
         if (rows.length === 0) return res.status(404).send("Persona no encontrada");
-        res.json(rows);
+        return res.json(rows);
     })
     .catch((error) => {
         console.error(error);

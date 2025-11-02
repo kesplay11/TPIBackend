@@ -23,7 +23,7 @@ router.get("/", function(req, res, next){
     let sql = "SELECT * FROM categorias WHERE borrado_logico = ?";
     db.query(sql,valores)
     .then(([rows, fields]) => {
-        res.json(rows);
+        return res.json(rows);
     })
     .catch((error) => {
         console.error(error);

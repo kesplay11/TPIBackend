@@ -91,7 +91,7 @@ router.get("/", function(req, res, next){
     const sql = "SELECT * FROM juegos WHERE borrado_logico = ?"
     db.query(sql, valores)
     .then(([rows, fields]) => {
-        res.json(rows);
+        return res.json(rows);
     })
     .catch((err) => { 
         console.error(err);

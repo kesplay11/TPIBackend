@@ -20,7 +20,7 @@ db.query(sql, [nombre, hora_inicio, hora_fin])
     });
 });
 
-router.get("/", function (req, res, next) {
+router.get("/", verifyRole([1,2,3]),function (req, res, next) {
 const { busqueda } = req.query;
 let sql = "SELECT * FROM turnos WHERE borrado_logico = 0";
 let parametros = [];
@@ -32,7 +32,7 @@ if (busqueda) {
 
 db.query(sql, parametros)
     .then(([rows]) => {
-    res.json(rows);
+    return res.json(rows);
     })
     .catch((error) => {
     console.error(error);

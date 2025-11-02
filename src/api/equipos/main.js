@@ -25,7 +25,7 @@ router.get("/", function(req, res, next){
     
     db.query(sql,valores)
     .then(([rows,fields]) => {
-        res.json(rows);
+        return res.json(rows);
     })
     .catch((error) => {
         console.error(error);

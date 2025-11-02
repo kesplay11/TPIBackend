@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const db = require("../../../conexion");
 const verifyRole = require('../../middlewares/verifyRole')
+const emitNotification = require("../../services/websocket/websocket") 
 
 router.post("/", verifyRole([1, 2]), function(req, res, next){
     const { equipo_id, juego_ronda_id, capitan_id, puntos, fecha_de_creacion } = req.body;
@@ -8,6 +9,15 @@ router.post("/", verifyRole([1, 2]), function(req, res, next){
 
     db.query(sql, [equipo_id, juego_ronda_id, capitan_id, puntos, fecha_de_creacion])
         .then(() => {
+            emitNotification("nuevo_punto",
+                {
+                    mensaje: `El capitan ${capitan_id} ha agregado puntos, a la ${juego_ronda_id}, para el equipo ${equipo_id}`,
+                    capitan_id,
+                    equipo_id,
+                    juego_ronda_id,
+                    fecha: new Date().toISOString(),
+                }
+            )
             res.status(201).send("El punto fue registrado correctamente");
         })
         .catch((error) => {
@@ -61,6 +71,11 @@ router.put("/estado/:punto_id", verifyRole([1]), async function (req, res, next)
         // 1️⃣ Actualizamos el estado del punto
         await db.query("UPDATE puntos SET estado_punto_id = ? WHERE punto_id = ?", [estado_punto_id, punto_id]);
 
+        if (estado_punto_id === 2){
+            emitNotification("punto_confirmado",{mensaje:`Punto: ${punto_id}, ha sido confirmado por coordinador`})
+        } else if (estado_punto_id === 3){
+            emitNotification(`punto rechazado`,{mensaje:`Punto ${punto_id} fue rechazado y debe reenviarse`})
+        }
         // 2️⃣ Si el estado cambia a "pendiente" (1), ponemos los puntos en 0
         if (estado_punto_id === 1) {
             await db.query("UPDATE puntos SET puntos = 0 WHERE punto_id = ?", [punto_id]);
@@ -92,7 +107,7 @@ router.get("/", function (req, res, next) {
 
     db.query(sql, valores)
         .then(([rows, fields]) => {
-            res.json(rows);
+            return res.json(rows);
         })
         .catch((error) => {
             console.error(error);

@@ -28,6 +28,7 @@ router.post('/', function(req, res, next) {
                     });
                     return res.status(200).json({
                         status: "ok",
+                        rol_id: persona.rol_id,
                         token,
                         es_primer_login: true
                     })
@@ -44,6 +45,7 @@ router.post('/', function(req, res, next) {
 
             res.status(200).json({ 
                 status: "ok", 
+                rol_id: persona.rol_id,
                 token, 
                 es_primer_login: false
             });

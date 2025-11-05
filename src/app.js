@@ -7,6 +7,8 @@ const juegosRouter = require('./api/juegos/main');
 const turnosRouter = require('./api/turnos/main');
 const puntosRouter = require('./api/puntos/main');
 const resultadosRouter = require('./api/resultado/main')
+const juegosRondasRouter = require('./api/juegos_rondas/main')
+const rondasEquipoRouter = require('./api/rondas_equipos/main')
 
 router.use('/personas', personasRouter);
 router.use('/equipos', equiposRouter);
@@ -15,6 +17,9 @@ router.use('/juegos', juegosRouter);
 router.use('/turnos', turnosRouter);
 router.use('/puntos', puntosRouter);
 router.use('/resultados', resultadosRouter);
+router.use('/juegosRondas', juegosRondasRouter);
+router.use('/rondasEquipos', rondasEquipoRouter);
+
 
 router.get('/', function (req,res,next){
     res.send('Archivo principal de la api');

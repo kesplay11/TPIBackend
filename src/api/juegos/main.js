@@ -85,19 +85,81 @@ db.getConnection()
     });
 });
 
-router.get("/", function(req, res, next){
-    const {borrado} = req.query;
-    let valores = [borrado === "1" ? 1 : 0]
-    const sql = "SELECT * FROM juegos WHERE borrado_logico = ?"
+router.get("/all", function(req, res, next){
+    const { borrado } = req.query;
+    // La consulta buscará '0' si borrado no es '1' (por defecto: juegos no borrados)
+    let valores = [borrado === "1" ? 1 : 0];
+    
+    // Consulta SQL refactorizada con JOINs
+    const sql = `
+        SELECT
+            j.juego_id,
+            j.fecha_de_creacion,
+            j.visible,
+            -- Datos procesados (nombres en lugar de IDs)
+            p.nombre AS nombre_creador,       -- Nombre de la persona que creó el juego
+            c.nombre AS nombre_categoria,     -- Nombre de la categoría del juego
+            t.nombre AS nombre_turno,         -- Nombre del turno asignado
+            e.nombre AS nombre_estado         -- Nombre del estado actual del juego
+        FROM
+            juegos j
+        LEFT JOIN
+            personas p ON j.persona_id = p.persona_id
+        LEFT JOIN
+            categorias c ON j.categoria_id = c.categoria_id
+        LEFT JOIN
+            turnos t ON j.turno_id = t.turno_id
+        LEFT JOIN
+            estados e ON j.estado_juego_id = e.estado_id
+        WHERE
+            j.borrado_logico = ?
+    `;
+
     db.query(sql, valores)
-    .then(([rows, fields]) => {
+    .then(([rows]) => {
+        return res.json(rows); // Devuelve la lista de juegos procesados
+    })
+    .catch((err) => { 
+        console.error("Error al obtener listado de juegos:", err);
+        res.status(500).send("Ocurrió un error en el servidor.");
+    });
+});
+
+// GET /visible - Muestra solo juegos visibles (j.visible = 1)
+router.get("/visible", function(req, res, next){
+    const { borrado } = req.query;
+    // La consulta buscará '0' si borrado no es '1' (por defecto: juegos no borrados)
+    let valores = [borrado === "1" ? 1 : 0];
+    
+    const sql = `
+        SELECT
+            j.juego_id,
+            j.fecha_de_creacion,
+            j.visible,
+            p.nombre AS nombre_creador,
+            c.nombre AS nombre_categoria,
+            t.nombre AS nombre_turno,
+            e.nombre AS nombre_estado
+        FROM
+            juegos j
+        LEFT JOIN personas p ON j.persona_id = p.persona_id
+        LEFT JOIN categorias c ON j.categoria_id = c.categoria_id
+        LEFT JOIN turnos t ON j.turno_id = t.turno_id
+        LEFT JOIN estados e ON j.estado_juego_id = e.estado_id
+        WHERE
+            j.borrado_logico = ?
+            AND j.visible = 1   -- 🚨 Filtro Clave: Solo juegos visibles
+    `;
+
+    db.query(sql, valores)
+    .then(([rows]) => {
         return res.json(rows);
     })
     .catch((err) => { 
-        console.error(err);
-        res.status(500).send("Algo ocurrio mal");
-    })
-})
+        console.error("Error al obtener listado de juegos visibles:", err);
+        res.status(500).send("Ocurrió un error en el servidor.");
+    });
+});
 
 
 router.put("/:juego_id", verifyRole([1]), function (req, res, next) {

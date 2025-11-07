@@ -115,5 +115,43 @@ router.get("/", function (req, res, next) {
         });
 });
 
+router.get("/:juego_ronda_id", function (req, res, next) {
+    const { busqueda } = req.query;
+    let sql = `
+        SELECT 
+            p.*, 
+            e.nombre AS nombre_equipo,
+            ep.desc_estado_punto 
+        FROM puntos p
+        JOIN equipos e ON p.equipo_id = e.equipo_id
+        JOIN estado_punto ep ON p.estado_punto_id = ep.estado_punto_id -- Nueva unión
+        WHERE p.borrado_logico = 0
+    `;
+
+    const valores = [];
+
+    // Si se pasa algo por ?busqueda=, filtramos por id de equipo, nombre de equipo, o descripcion del estado
+    if (busqueda) {
+        sql += " AND (p.equipo_id LIKE ? OR e.nombre LIKE ? OR ep.desc_estado_punto LIKE ?)";
+        valores.push(`%${busqueda}%`, `%${busqueda}%`, `%${busqueda}%`);
+    }
+    
+    // Si se decidiera usar el filtro por juego_ronda_id (tal como se mencionó en la nota anterior)
+    /* if (req.params.juego_ronda_id) {
+        sql += " AND p.juego_ronda_id = ?";
+        valores.push(req.params.juego_ronda_id);
+    }
+    */
+
+    db.query(sql, valores)
+        .then(([rows, fields]) => {
+            return res.json(rows);
+        })
+        .catch((error) => {
+            console.error(error);
+            res.status(500).send("Ocurrió un error al obtener los puntos");
+        });
+});
+
 
 module.exports = router;

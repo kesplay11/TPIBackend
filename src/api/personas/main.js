@@ -5,7 +5,7 @@ const { sendEmail } = require('../../services/nodemailer/nodemailer');
 const { hashPass } = require("@damianegreco/hashpass");
 
 
-router.post('/mail', verifyRole([1]), async (req, res, next) => {
+router.post('/mail', async (req, res, next) => {
     // 1. Desestructuración de los datos necesarios
     const { documento, rol_id, equipo_id, correo, anio_escolar, nombre } = req.body;
     
@@ -52,29 +52,57 @@ router.post('/mail', verifyRole([1]), async (req, res, next) => {
     }
 });
 
-router.get("/verificar/:dni", verifyRole([1]), function(req, res, next) {
+router.get("/verificar/:dni", function(req, res, next) {
 const { dni } = req.params;
 
-db.query("SELECT * FROM personas WHERE documento = ?", [dni])
+db.query(`SELECT
+            p.persona_id,       -- Mantener el ID para operaciones de edición/estado
+            p.documento,
+            p.correo,
+            p.nombre,
+            p.anio_escolar,
+            p.borrado_logico,
+            r.rol_nombre AS nombre_rol,     -- ✅ Procesado: Nombre del Rol
+            e.nombre AS nombre_equipo       -- ✅ Procesado: Nombre del Equipo
+        FROM
+            personas p
+        LEFT JOIN
+            roles r ON p.rol_id = r.rol_id
+        LEFT JOIN
+            equipos e ON p.equipo_id = e.equipo_id
+        WHERE documento = ?`, [dni])
     .then(([rows]) => {
-    if (rows.length === 0) {
-        return res.status(200).json({ message: 'Ningún usuario registrado con ese DNI' });
-    }
+        // 1. Caso: No se encontraron datos (Resultado OK, pero array vacío)
+        if (rows.length === 0) {
+            // Retorna 200 (OK) con un mensaje claro de que NO existe y puede crearla.
+            return res.status(200).json({
+                message: 'La persona no existe en el sistema, puede seguir',
+                puedeCrear: true
+            });
+        }
 
-    const persona = rows[0];
+        const persona = rows[0];
 
-    if (persona.borrado_logico === 0) {
-        return res.status(200).json({ message: 'La persona ya está registrada en el sistema.' });
-    } else {
-        return res.status(200).json({
-        message: 'La persona existe pero está dada de baja. ¿Desea reactivarla?',
-        puedeReactivar: true
-        });
-    }
+        // 2. Caso: Persona encontrada (Activa o Borrada Lógicamente)
+        if (persona.borrado_logico === 0) {
+            return res.status(200).json({ message: 'La persona ya está registrada en el sistema.' });
+        }
+
+        if (persona.borrado_logico === 1) {
+            return res.status(200).json({
+                message: 'La persona existe pero está dada de baja. ¿Desea reactivarla?',
+                puedeReactivar: true
+            });
+        }
     })
+    // 3. Caso: Error de la base de datos/consulta (Error técnico inesperado)
     .catch(error => {
-    console.error('Error al verificar el DNI:', error);
-    res.status(500).json({ error: 'Error al verificar el DNI' });
+        console.error('Error FATAL al verificar el DNI:', error);
+        // Retorna 500 para indicar un error interno del servidor.
+        return res.status(500).json({
+            message: 'Ocurrió un error interno al consultar la base de datos.',
+            error: error.message // Opcional, solo para debug, no en producción
+        });
     });
 });
 
@@ -165,10 +193,10 @@ router.get("/:persona_id", function(req, res, next) {
 
 router.put("/:persona_id", function(req, res, next){
     const {persona_id} = req.params;
-    const {documento, rol_id, equipo_id, correo, nombre} = req.body;
-    const valores = [documento, rol_id, equipo_id, correo, nombre, persona_id]
+    const {documento, rol_id, equipo_id, correo, nombre, anio_escolar} = req.body;
+    const valores = [documento, rol_id, equipo_id, correo, nombre, anio_escolar, persona_id]
     const sql = `UPDATE personas
-    SET documento = ?, rol_id = ?, equipo_id = ?, correo = ?, nombre = ?
+    SET documento = ?, rol_id = ?, equipo_id = ?, correo = ?, nombre = ?, anio_escolar = ?
     WHERE persona_id = ?
     `
     db.query(sql, valores)
@@ -182,7 +210,7 @@ router.put("/:persona_id", function(req, res, next){
 })
 
 //crear otra ruta aparte para el "eliminar" (borrado logico)
-router.put("/estado/:persona_id", verifyRole([1]), function(req, res, next){
+router.put("/estado/:persona_id", function(req, res, next){
     const { persona_id } = req.params;
     const { borrado_logico } = req.body;
     let sql = `
@@ -191,6 +219,25 @@ router.put("/estado/:persona_id", verifyRole([1]), function(req, res, next){
     WHERE persona_id = ?
     `;
     db.query(sql,[borrado_logico, persona_id])
+    .then(() => {
+        const mensaje = borrado_logico == 1 ? `Se 'borro' correctamente` : `Se reactivo correctamente`;
+        res.status(200).send(mensaje);
+    })
+    .catch((error) => {
+        console.error(error);
+        res.status(500).send("Ocurrio un error");
+    })
+})
+
+router.put("/estado/dni/:documento", function(req, res, next){
+    const { documento } = req.params;
+    const { borrado_logico } = req.body;
+    let sql = `
+    UPDATE personas
+    SET borrado_logico = ?
+    WHERE documento = ?
+    `;
+    db.query(sql,[borrado_logico, documento])
     .then(() => {
         const mensaje = borrado_logico == 1 ? `Se 'borro' correctamente` : `Se reactivo correctamente`;
         res.status(200).send(mensaje);

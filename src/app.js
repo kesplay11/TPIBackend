@@ -6,9 +6,10 @@ const categoriasRouter = require('./api/categorias/main');
 const juegosRouter = require('./api/juegos/main');
 const turnosRouter = require('./api/turnos/main');
 const puntosRouter = require('./api/puntos/main');
-const resultadosRouter = require('./api/resultado/main')
-const juegosRondasRouter = require('./api/juegos_rondas/main')
-const rondasEquipoRouter = require('./api/rondas_equipos/main')
+const resultadosRouter = require('./api/resultado/main');
+const juegosRondasRouter = require('./api/juegos_rondas/main');
+const rondasEquipoRouter = require('./api/rondas_equipos/main');
+const rolesRouter = require('./api/roles/main');
 
 router.use('/personas', personasRouter);
 router.use('/equipos', equiposRouter);
@@ -19,6 +20,7 @@ router.use('/puntos', puntosRouter);
 router.use('/resultados', resultadosRouter);
 router.use('/juegosRondas', juegosRondasRouter);
 router.use('/rondasEquipos', rondasEquipoRouter);
+router.use("/roles", rolesRouter);
 
 
 router.get('/', function (req,res,next){

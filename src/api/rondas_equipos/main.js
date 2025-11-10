@@ -18,33 +18,29 @@ router.post("/", async (req, res) => {
   }
 });
 
-router.get("/rondas/:juego_ronda_id/equipos", function(req, res, next) {
+router.get("/:juego_ronda_id/equipos", function(req, res, next) {
     const { juego_ronda_id } = req.params;
-    let valores = [juego_ronda_id];
+    const valores = [juego_ronda_id];
 
-    // Consulta SQL para unir rondas_equipos con equipos y obtener los nombres
+    // Solo traemos todos los equipos asociados a la ronda
     const sql = `
-        SELECT
+        SELECT 
             re.ronda_equipo_id,
-            re.equipo_id,
-            e.nombre AS nombre_equipo  -- ✅ Procesado: Trae el nombre del equipo
-        FROM
-            rondas_equipos re
-        LEFT JOIN
-            equipos e ON re.equipo_id = e.equipo_id
-        WHERE
-            re.juego_ronda_id = ? 
+            e.equipo_id,
+            e.nombre AS nombre_equipo
+        FROM rondas_equipos re
+        JOIN equipos e ON re.equipo_id = e.equipo_id
+        WHERE re.juego_ronda_id = ?
     `;
 
     db.query(sql, valores)
-    .then(([rows]) => {
-        // La consulta trae los equipos involucrados en esa ronda
-        return res.json(rows);
-    })
-    .catch((err) => {
-        console.error(`Error al obtener equipos para juego_ronda ${juego_ronda_id}:`, err);
-        res.status(500).send("Ocurrió un error al listar los equipos de la ronda.");
-    });
+        .then(([rows]) => res.json(rows))
+        .catch(error => {
+            console.error(error);
+            res.status(500).send("Ocurrió un error al obtener los equipos");
+        });
 });
+
+
 
 module.exports = router;

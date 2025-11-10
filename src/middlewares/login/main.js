@@ -7,7 +7,23 @@ const { TOKEN_SECRET } = process.env;
 router.post('/', function(req, res, next) {
     const { correo, pass } = req.body;
 
-    const sql = "SELECT persona_id, nombre, correo, rol_id , documento, hash_contraseña, primer_login FROM personas WHERE correo = ? AND borrado_logico = 0";
+    const sql = `SELECT 
+    p.persona_id, 
+    p.nombre, 
+    p.correo, 
+    p.rol_id, 
+    p.equipo_id,
+    e.nombre AS nombre_equipo, -- Renombramos la columna 'nombre' de equipos
+    p.documento, 
+    p.hash_contraseña, 
+    p.primer_login 
+FROM 
+    personas p
+INNER JOIN 
+    equipos e ON p.equipo_id = e.equipo_id
+WHERE 
+    p.correo = ? 
+    AND p.borrado_logico = 0`;
 
     db.query(sql, [correo])
     .then(async ([personas]) => {
@@ -24,7 +40,9 @@ router.post('/', function(req, res, next) {
                         nombre: persona.nombre,
                         correo: persona.correo,
                         rol_id: persona.rol_id,
-                        primer_login: true
+                        primer_login: true,
+                        equipo_id: persona.equipo_id,
+                        equipo: persona.nombre_equipo                    
                     });
                     return res.status(200).json({
                         status: "ok",
@@ -40,7 +58,9 @@ router.post('/', function(req, res, next) {
                 persona_id: persona.persona_id,
                 nombre: persona.nombre,
                 correo: persona.correo,
-                rol_id: persona.rol_id
+                rol_id: persona.rol_id,
+                equipo_id: persona.equipo_id,
+                equipo: persona.nombre_equipo
             });
 
             res.status(200).json({ 

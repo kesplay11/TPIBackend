@@ -19,7 +19,7 @@ const apiRouter = require('./src/app');
 const apiRouterPublic = require('./src/appPublic');
 
 app.use('/api/public', apiRouterPublic);
-app.use('/api', apiRouter);
+app.use('/api', verifyToken, apiRouter);
 
 initWebSocket(server);
 

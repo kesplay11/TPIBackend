@@ -40,40 +40,61 @@ router.post("/", async function(req, res, next){
 });
 
 
-router.put("/:punto_id", async function (req, res, next) {
-    const { punto_id } = req.params;
-    const { puntos } = req.body;
-    const rol = req.user.rol_id; // suponiendo que tu verifyRole agrega los datos del usuario
-    try {
-        // 1️⃣ Obtenemos el estado actual del punto
-        const [rows] = await db.query("SELECT estado_punto_id FROM puntos WHERE punto_id = ?", [punto_id]);
-        if (!rows.length) return res.status(404).send("El punto no existe");
+router.put("/:punto_id", async (req, res) => {
+  const { punto_id } = req.params;
+  const { puntos } = req.body;
+  const rol = req.user?.rol_id; // el middleware verifyRole debe adjuntar req.user
 
-        const estadoActual = rows[0].estado_punto_id;
-
-        // 2️⃣ Lógica por rol y estado
-        if (rol === 2) {
-            // 🧩 Rol 2 = Capitán
-            if (estadoActual === 3) { 
-                // 3 = rechazado (por ejemplo)
-                await db.query("UPDATE puntos SET puntos = ?, estado_punto_id = 1 WHERE punto_id = ?", [puntos, punto_id]);
-                return res.status(200).send("El punto fue reenviado y quedó en estado pendiente nuevamente");
-            } else {
-                return res.status(403).send("No podés modificar un punto que no esté rechazado");
-            }
-        }
-
-        if (rol === 1) {
-            // 🧩 Rol 1 = Coordinador (puede editar en cualquier caso)
-            await db.query("UPDATE puntos SET puntos = ? WHERE punto_id = ?", [puntos, punto_id]);
-            return res.status(200).send("El punto fue actualizado correctamente por el coordinador");
-        }
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).send("Ocurrió un error al actualizar el punto");
+  try {
+    // 1️⃣ Verificamos existencia
+    const [rows] = await db.query(
+      "SELECT estado_punto_id FROM puntos WHERE punto_id = ? AND borrado_logico = 0",
+      [punto_id]
+    );
+    if (!rows.length) {
+      return res.status(404).json({ message: "El punto no existe" });
     }
+
+    const estadoActual = rows[0].estado_punto_id;
+
+    // 2️⃣ Lógica de permisos
+    if (rol === 2) {
+      // 🧩 Capitán
+      if (estadoActual === 3) {
+        await db.query(
+          "UPDATE puntos SET puntos = ?, estado_punto_id = 1 WHERE punto_id = ?",
+          [puntos, punto_id]
+        );
+        return res.json({
+          message: "✅ El punto fue reenviado y quedó en estado pendiente nuevamente",
+        });
+      } else {
+        return res.status(403).json({
+          message: "Solo podés modificar puntos que estén en estado rechazado",
+        });
+      }
+    }
+
+    if (rol === 1) {
+      // 🧩 Coordinador
+      await db.query(
+        "UPDATE puntos SET puntos = ? WHERE punto_id = ?",
+        [puntos, punto_id]
+      );
+      return res.json({
+        message: "✅ El punto fue actualizado correctamente por el coordinador",
+      });
+    }
+
+    // 🚫 Otros roles no pueden modificar
+    return res.status(403).json({ message: "No tenés permisos para modificar puntos" });
+
+  } catch (error) {
+    console.error("❌ Error en PUT /api/puntos/:punto_id:", error);
+    res.status(500).json({ message: "Ocurrió un error al actualizar el punto" });
+  }
 });
+
 
 
 router.put("/estado/:punto_id", async function (req, res, next) {

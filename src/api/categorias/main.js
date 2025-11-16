@@ -31,6 +31,19 @@ router.get("/", function(req, res, next){
     })
 })
 
+router.get("/:categoria_id", function(req, res, next){
+    const { categoria_id } = req.params;
+    let sql = "SELECT * FROM categorias WHERE categoria_id = ?";
+    db.query(sql,[categoria_id])
+    .then(([rows, fields]) => {
+        return res.json(rows);
+    })
+    .catch((err) => {
+        console.error(err);
+        res.status(500).send("Ocurrio un error")
+    })
+})
+
 router.put("/:categoria_id", verifyRole([1]),function(req, res, next){
     const { categoria_id } = req.params;
     const { nombre } = req.body;

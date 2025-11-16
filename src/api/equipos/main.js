@@ -33,6 +33,21 @@ router.get("/", function(req, res, next){
     })
 })
 
+router.get("/:equipo_id", function(req, res, next){
+    const { equipo_id } = req.params;
+    let sql = "SELECT * FROM equipos WHERE equipo_id = ?";
+    let valores = [equipo_id   ];
+    
+    db.query(sql,valores)
+    .then(([rows,fields]) => {
+        return res.json(rows);
+    })
+    .catch((error) => {
+        console.error(error);
+        res.status(500).send("Ocurrio un error");
+    })
+})
+
 router.put("/:equipo_id", verifyRole([1]), function(req, res, next){
     const { equipo_id } = req.params;
 

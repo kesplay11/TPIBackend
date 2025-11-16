@@ -17,7 +17,7 @@ app.use(express.json());
 
 const apiRouter = require('./src/app');
 const apiRouterPublic = require('./src/appPublic');
-
+  
 app.use('/api/public', apiRouterPublic);
 app.use('/api', verifyToken, apiRouter);
 

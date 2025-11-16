@@ -20,24 +20,20 @@ db.query(sql, [nombre, hora_inicio, hora_fin])
     });
 });
 
+
 router.get("/", verifyRole([1,2,3]),function (req, res, next) {
-const { busqueda } = req.query;
-let sql = "SELECT * FROM turnos WHERE borrado_logico = 0";
-let parametros = [];
-
-if (busqueda) {
-    sql += " AND nombre LIKE ?";
-    parametros.push(`%${busqueda}%`);
-}
-
-db.query(sql, parametros)
-    .then(([rows]) => {
-    return res.json(rows);
+const { borrado } = req.query;
+let sql = "SELECT * FROM turnos WHERE borrado_logico = ?";
+let valores = [borrado === "1" ? 1 : 0];
+    
+    db.query(sql,valores)
+    .then(([rows,fields]) => {
+        return res.json(rows);
     })
     .catch((error) => {
-    console.error(error);
-    res.status(500).send("Ocurrió un error al obtener los turnos");
-    });
+        console.error(error);
+        res.status(500).send("Ocurrio un error");
+    })
 });
 
 // 🟠 Actualizar turno por ID
@@ -60,6 +56,21 @@ db.query(sql, [nombre, hora_inicio, hora_fin, turno_id])
     res.status(500).send("Ocurrió un error al actualizar el turno");
     });
 });
+
+router.get("/:turno_id", function(req, res, next){
+    const { turno_id } = req.params;
+    let sql = "SELECT * FROM turnos WHERE turno_id = ?";
+    let valores = [ turno_id ];
+    
+    db.query(sql,valores)
+    .then(([rows,fields]) => {
+        return res.json(rows);
+    })
+    .catch((error) => {
+        console.error(error);
+        res.status(500).send("Ocurrio un error");
+    })
+})
 
 // 🔴 Cambiar estado lógico (borrado / reactivado)
 router.put("/estado/:turno_id", verifyRole([1]), function (req, res, next) {

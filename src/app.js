@@ -10,6 +10,7 @@ const resultadosRouter = require('./api/resultado/main');
 const juegosRondasRouter = require('./api/juegos_rondas/main');
 const rondasEquipoRouter = require('./api/rondas_equipos/main');
 const rolesRouter = require('./api/roles/main');
+const estadosJuegosRouter = require('./api/estados_juegos/main');
 
 router.use('/personas', personasRouter);
 router.use('/equipos', equiposRouter);
@@ -21,6 +22,7 @@ router.use('/resultados', resultadosRouter);
 router.use('/juegosRondas', juegosRondasRouter);
 router.use('/rondasEquipos', rondasEquipoRouter);
 router.use("/roles", rolesRouter);
+router.use('/estados',estadosJuegosRouter);
 
 
 router.get('/', function (req,res,next){

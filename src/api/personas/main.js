@@ -191,6 +191,7 @@ router.get("/:persona_id", function(req, res, next) {
     });
 });
 
+
 router.put("/:persona_id", function(req, res, next){
     const {persona_id} = req.params;
     const {documento, rol_id, equipo_id, correo, nombre, anio_escolar} = req.body;

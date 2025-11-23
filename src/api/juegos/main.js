@@ -2,9 +2,9 @@ const router = require('express').Router();
 const db = require("../../../conexion");
 const verifyRole = require('../../middlewares/verifyRole')
 
-const { obtenerResultadosPorJuego } = require("./JuegosController")
+const { obtenerResultadosPorJuego, actualizarRonda } = require("./JuegosController")
 
-router.post("/", verifyRole([1]), function (req, res, next) {
+router.post("/", verifyRole([1,2]), function (req, res, next) {
 const { persona_id, categoria_id, turno_id, estado_juego_id, visible, rondas } = req.body;
 db.getConnection()
     .then((connection) => {
@@ -163,6 +163,84 @@ router.get("/visible", function(req, res, next){
 
 router.get("/:juego_id", verifyRole([1, 2, 3]), obtenerResultadosPorJuego);
 
+// NUEVO ENDPOINT - Obtener juego completo para edición
+router.get("/editar/:juego_id", verifyRole([1,2]), async function (req, res) {
+    const { juego_id } = req.params;
+
+    try {
+        // 1. Datos del juego
+        const sqlJuego = `
+            SELECT 
+                j.juego_id, j.categoria_id, j.turno_id, 
+                j.estado_juego_id, j.visible,
+                c.nombre AS nombre_categoria,
+                t.nombre AS nombre_turno,
+                es.nombre AS estado_nombre
+            FROM juegos j
+            LEFT JOIN categorias c ON j.categoria_id = c.categoria_id
+            LEFT JOIN turnos t ON j.turno_id = t.turno_id
+            LEFT JOIN estados es ON j.estado_juego_id = es.estado_id
+            WHERE j.juego_id = ? AND j.borrado_logico = 0
+            LIMIT 1
+        `;
+
+        // 2. Rondas del juego
+        const sqlRondas = `
+            SELECT 
+                jr.juego_ronda_id, jr.estado_ronda_id, jr.numero_ronda,
+                es.nombre AS estado_nombre
+            FROM juegos_rondas jr
+            LEFT JOIN estados es ON jr.estado_ronda_id = es.estado_id
+            WHERE jr.juego_id = ? AND jr.borrado_logico = 0
+            ORDER BY jr.numero_ronda
+        `;
+
+        // 3. Equipos por ronda
+        const sqlEquiposPorRonda = `
+            SELECT 
+                re.juego_ronda_id,
+                re.equipo_id,
+                e.nombre AS equipo_nombre
+            FROM rondas_equipos re
+            INNER JOIN equipos e ON re.equipo_id = e.equipo_id
+            WHERE re.juego_ronda_id IN (
+                SELECT juego_ronda_id FROM juegos_rondas 
+                WHERE juego_id = ? AND borrado_logico = 0
+            )
+        `;
+
+        const [[juego], [rondas], [equiposPorRonda]] = await Promise.all([
+            db.query(sqlJuego, [juego_id]),
+            db.query(sqlRondas, [juego_id]),
+            db.query(sqlEquiposPorRonda, [juego_id])
+        ]);
+
+        if (!juego || juego.length === 0) {
+            return res.status(404).json({ mensaje: "Juego no encontrado" });
+        }
+
+        // Combinar rondas con sus equipos
+        const rondasCompletas = rondas.map(ronda => ({
+            ...ronda,
+            equipos: equiposPorRonda
+                .filter(eq => eq.juego_ronda_id === ronda.juego_ronda_id)
+                .map(eq => ({
+                    equipo_id: eq.equipo_id,
+                    nombre: eq.equipo_nombre
+                }))
+        }));
+
+        res.json({
+            juego: juego[0],
+            rondas: rondasCompletas
+        });
+
+    } catch (error) {
+        console.error("Error en GET /editar/:juego_id", error);
+        res.status(500).json({ mensaje: "Error en la consulta" });
+    }
+});
+
 router.get("/datos/:juego_id", async function (req, res) {
     const { juego_id } = req.params;
 
@@ -283,51 +361,6 @@ router.get("/rondas/:juego_ronda_id", async function (req, res) {
 });
 
 
-
-
-
-
-router.put("/estado/:juego_id", verifyRole([1]), function (req, res, next) {
-    const { juego_id } = req.params;
-    const { estado_juego_id } = req.body;
-
-    const sql = `
-        UPDATE juegos
-        SET estado_juego_id = ?
-        WHERE juego_id = ?
-    `;
-
-    db.query(sql, [estado_juego_id, juego_id])
-        .then(() => {
-            res.status(200).send("Estado del juego actualizado correctamente");
-        })
-        .catch((error) => {
-            console.error(error);
-            res.status(500).send("Error al cambiar el estado del juego");
-        });
-});
-
-
-router.put("/visible/:juego_id", verifyRole([1]), function (req, res, next) {
-    const { juego_id } = req.params;
-    const { visible } = req.body;
-
-    const sql = `
-        UPDATE juegos
-        SET visible = ?
-        WHERE juego_id = ?
-    `;
-
-    db.query(sql, [visible, juego_id])
-        .then(() => {
-            res.status(200).send("Visibilidad del juego actualizada");
-        })
-        .catch((error) => {
-            console.error(error);
-            res.status(500).send("Error al actualizar la visibilidad");
-        });
-});
-
 /* ================================================
    4️⃣ BORRAR (lógico) UN JUEGO
 ================================================ */
@@ -398,59 +431,6 @@ router.post("/:juego_id/rondas", verifyRole([1]), function (req, res, next) {
         });
 });
 
-//"editar" los equipos de una ronda
-router.put("/ronda/:juego_ronda_id", verifyRole([1]), async (req, res) => {
-const { juego_ronda_id } = req.params;
-const { equipos } = req.body;
-
-try {
-    // 1️⃣ Verificar si ya existen puntos cargados para esta ronda
-    const [rows] = await db.query(
-    "SELECT COUNT(*) AS count FROM puntos WHERE juego_ronda_id = ?",
-    [juego_ronda_id]
-    );
-
-    if (rows[0].count > 0) {
-    return res.status(400).json({
-        mensaje: "No se pueden modificar los equipos porque ya existen puntos cargados en esta ronda.",
-    });
-    }
-
-    // 2️⃣ Si no hay puntos, actualizar los equipos normalmente
-    await db.query("DELETE FROM rondas_equipos WHERE juego_ronda_id = ?", [juego_ronda_id]);
-
-    const values = equipos.map((id) => [id, juego_ronda_id]);
-    await db.query(
-    "INSERT INTO rondas_equipos (equipo_id, juego_ronda_id) VALUES ?",
-    [values]
-    );
-
-    res.json({ mensaje: "Equipos actualizados correctamente" });
-} catch (error) {
-    console.error(error);
-    res.status(500).send("Error en el servidor");
-}
-});
-
-router.put("/estado-ronda/:juego_ronda_id", verifyRole([1]),function (req, res, next) {
-    const { juego_ronda_id } = req.params;
-    const { estado_ronda_id } = req.body;
-
-    const sql = `
-        UPDATE juegos_rondas
-        SET estado_ronda_id = ?
-        WHERE juego_ronda_id = ?
-    `;
-
-    db.query(sql, [estado_ronda_id, juego_ronda_id])
-        .then(() => {
-            res.status(200).send("Estado de la ronda actualizado correctamente");
-        })
-        .catch((error) => {
-            console.error(error);
-            res.status(500).send("Error al cambiar el estado de la ronda");
-        });
-});
 
 
 router.put("/borrar-ronda/:juego_ronda_id", verifyRole([1]), function (req, res, next) {
@@ -498,110 +478,77 @@ router.put("/:juego_id", verifyRole([1]), function (req, res, next) {
 
 
 
+router.put("/rondas/:juego_ronda_id", verifyRole([1]), actualizarRonda);
 
 
-// PUT /api/juegos/rondas/:juego_ronda_id
-router.put("/rondas/:juego_ronda_id", verifyRole([1]), function (req, res, next) {
+// GET /api/juegos/ronda-completa/:juego_ronda_id
+router.get("/ronda-completa/:juego_ronda_id", verifyRole([1]), async function (req, res) {
     const { juego_ronda_id } = req.params;
-    const { estado_ronda_id, numero_ronda, equipos } = req.body;
 
-    // Si mandaron 'equipos', verificamos que no haya puntos ya guardados
-    if (Array.isArray(equipos)) {
-        db.query("SELECT COUNT(*) AS count FROM puntos WHERE juego_ronda_id = ?", [juego_ronda_id])
-        .then(([rows]) => {
-            if (rows[0].count > 0) {
-            return res.status(400).json({
-                mensaje: "No se pueden modificar los equipos porque ya existen puntos cargados en esta ronda.",
-            });
+    try {
+        const sql = `
+            SELECT 
+                jr.juego_ronda_id,
+                jr.numero_ronda,
+                jr.estado_ronda_id,
+                jr.juego_id,
+                j.categoria_id,
+                j.turno_id,
+                j.estado_juego_id,
+                c.nombre AS nombre_categoria,
+                t.nombre AS nombre_turno,
+                e.nombre AS estado_juego_nombre,
+                er.nombre AS estado_ronda_nombre
+            FROM juegos_rondas jr
+            INNER JOIN juegos j ON jr.juego_id = j.juego_id
+            LEFT JOIN categorias c ON j.categoria_id = c.categoria_id
+            LEFT JOIN turnos t ON j.turno_id = t.turno_id
+            LEFT JOIN estados e ON j.estado_juego_id = e.estado_id
+            LEFT JOIN estados er ON jr.estado_ronda_id = er.estado_id
+            WHERE jr.juego_ronda_id = ? AND jr.borrado_logico = 0
+        `;
+
+        const [rows] = await db.query(sql, [juego_ronda_id]);
+        if (rows.length === 0) {
+            return res.status(404).json({ mensaje: "Ronda no encontrada" });
+        }
+
+        const ronda = rows[0];
+
+        // Obtener equipos de la ronda
+        const [equipos] = await db.query(
+            `SELECT e.equipo_id, e.nombre 
+             FROM rondas_equipos re 
+             INNER JOIN equipos e ON re.equipo_id = e.equipo_id 
+             WHERE re.juego_ronda_id = ?`,
+            [juego_ronda_id]
+        );
+
+        res.json({
+            datos_puros: {
+                juego_ronda_id: ronda.juego_ronda_id,
+                numero_ronda: ronda.numero_ronda,
+                estado_ronda_id: ronda.estado_ronda_id,
+                juego_id: ronda.juego_id,
+                categoria_id: ronda.categoria_id,
+                turno_id: ronda.turno_id,
+                estado_juego_id: ronda.estado_juego_id
+            },
+            datos_procesados: {
+                numero_ronda: ronda.numero_ronda,
+                estado_ronda: ronda.estado_ronda_nombre,
+                juego: {
+                    categoria: ronda.nombre_categoria,
+                    turno: ronda.nombre_turno,
+                    estado: ronda.estado_juego_nombre
+                },
+                equipos: equipos
             }
-            // Si no hay puntos, procedemos con la actualización completa
-            return proceedUpdate();
-        })
-        .catch((err) => {
-            console.error("Error al verificar puntos:", err);
-            return res.status(500).send("Error al verificar puntos de la ronda");
         });
-    } else {
-        // No vienen equipos -> sólo actualizar estado/numero (si vienen)
-        proceedUpdate();
-    }
 
-    function proceedUpdate() {
-        db.getConnection()
-        .then((connection) => {
-            return connection
-            .beginTransaction()
-            .then(() => {
-                // 1) Preparar updates para estado_ronda_id / numero_ronda
-                const updates = [];
-                const vals = [];
-
-                if (estado_ronda_id !== undefined) {
-                updates.push("estado_ronda_id = ?");
-                vals.push(estado_ronda_id);
-                }
-                if (numero_ronda !== undefined) {
-                updates.push("numero_ronda = ?");
-                vals.push(numero_ronda);
-                }
-
-                const updatePromise = updates.length
-                ? connection.query(`UPDATE juegos_rondas SET ${updates.join(", ")} WHERE juego_ronda_id = ?`, [...vals, juego_ronda_id])
-                : Promise.resolve();
-
-                return updatePromise
-                .then(() => {
-                    // 2) Si vienen equipos, reemplazamos (DELETE -> INSERT)
-                    if (Array.isArray(equipos)) {
-                    return connection
-                        .query("DELETE FROM rondas_equipos WHERE juego_ronda_id = ?", [juego_ronda_id])
-                        .then(() => {
-                        if (equipos.length === 0) return Promise.resolve();
-                        const values = equipos.map((id) => [id, juego_ronda_id]);
-                        return connection.query("INSERT INTO rondas_equipos (equipo_id, juego_ronda_id) VALUES ?", [values]);
-                        });
-                    }
-                    return Promise.resolve();
-                })
-                .then(() => connection.commit())
-                .then(() => {
-                    // 3) Devolver la ronda actualizada y sus equipos (opcional, pero útil)
-                    return connection
-                    .query("SELECT * FROM juegos_rondas WHERE juego_ronda_id = ?", [juego_ronda_id])
-                    .then(([rondasRows]) => {
-                        return connection
-                        .query("SELECT e.equipo_id, e.nombre FROM rondas_equipos re JOIN equipos e ON re.equipo_id = e.equipo_id WHERE re.juego_ronda_id = ?", [juego_ronda_id])
-                        .then(([equiposRows]) => {
-                            res.status(200).json({
-                            message: "Ronda actualizada correctamente",
-                            ronda: rondasRows[0] || null,
-                            equipos: equiposRows || [],
-                            });
-                        });
-                    });
-                })
-                .catch((err) => {
-                    // rollback en caso de error durante la transacción
-                    return connection.rollback().then(() => {
-                    console.error("Error en transacción al actualizar ronda:", err);
-                    res.status(500).send("Error al actualizar la ronda");
-                    });
-                })
-                .finally(() => {
-                    connection.release();
-                });
-            })
-            .catch((err) => {
-                // error al iniciar transaccion
-                console.error("Error al iniciar transacción:", err);
-                connection.release();
-                res.status(500).send("Error al procesar la actualización de la ronda");
-            });
-        })
-        .catch((err) => {
-            console.error("Error al obtener conexión:", err);
-            res.status(500).send("Error al conectar con la base");
-        });
+    } catch (error) {
+        console.error("Error en GET /ronda-completa/:juego_ronda_id", error);
+        res.status(500).json({ mensaje: "Error en la consulta" });
     }
 });
 

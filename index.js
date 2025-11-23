@@ -1,6 +1,4 @@
-
-require('dotenv').config();//nos levantar todas las vatriables de memeoria del .env
-const path = require('path');
+require('dotenv').config();
 const express = require("express");
 const http = require("http");
 const cors = require("cors");
@@ -12,7 +10,14 @@ const { PORT } = process.env;
 const app = express();
 const server = http.createServer(app);
 
-app.use(cors());
+// Configuración CORS para Express
+const corsOptions = {
+    origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
+    credentials: true,
+    optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 const apiRouter = require('./src/app');
@@ -21,12 +26,13 @@ const apiRouterPublic = require('./src/appPublic');
 app.use('/api/public', apiRouterPublic);
 app.use('/api', verifyToken, apiRouter);
 
+// Inicializar WebSocket con el servidor
 initWebSocket(server);
 
-app.listen(PORT, function(error){
-    if(error){
+server.listen(PORT, function(error) {
+    if (error) {
         console.error(error);
-        process.exit(1);//el uno es que salio mal
+        process.exit(1);
     }
-    console.log(`Escuchando en el puerto ${PORT}`);
-})
+    console.log(`🚀 Backend escuchando en puerto ${PORT}`);
+});

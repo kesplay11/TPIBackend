@@ -368,21 +368,47 @@ router.put("/borrar/:juego_id", verifyRole([1]), function (req, res, next) {
     const { juego_id } = req.params;
     const { borrado_logico } = req.body;
 
-    const sql = `
-        UPDATE juegos
-        SET borrado_logico = ?
-        WHERE juego_id = ?
-    `;
-
-    db.query(sql, [borrado_logico, juego_id])
-        .then(() => {
-        const msg = borrado_logico === 1 ? "Juego borrado lógicamente" : "Juego restaurado";
-        res.status(200).send(msg);
+    db.getConnection()
+        .then((connection) => {
+            return connection.beginTransaction()
+                .then(() => {
+                    // 1. Borrar/restaurar el juego
+                    return connection.query(
+                        "UPDATE juegos SET borrado_logico = ? WHERE juego_id = ?",
+                        [borrado_logico, juego_id]
+                    );
+                })
+                .then(() => {
+                    // 2. Borrar/restaurar las rondas del juego (CASCADA)
+                    return connection.query(
+                        "UPDATE juegos_rondas SET borrado_logico = ? WHERE juego_id = ?",
+                        [borrado_logico, juego_id]
+                    );
+                })
+                .then(() => {
+                    return connection.commit();
+                })
+                .then(() => {
+                    const msg = borrado_logico === 1 ? 
+                        "Juego y sus rondas borrados lógicamente" : 
+                        "Juego y sus rondas restaurados";
+                    res.status(200).send(msg);
+                })
+                .catch((error) => {
+                    return connection.rollback()
+                        .then(() => {
+                            console.error("Error al cambiar estado de borrado del juego:", error);
+                            res.status(500).send("Error al cambiar el estado de borrado del juego");
+                        });
+                })
+                .finally(() => {
+                    connection.release();
+                });
         })
         .catch((error) => {
-        console.error("Error al cambiar estado de borrado del juego:", error);
-        res.status(500).send("Error al cambiar el estado de borrado del juego");
-    });
+            console.error("Error al obtener conexión:", error);
+            res.status(500).send("Error de conexión a la base de datos");
+        });
 });
 
 

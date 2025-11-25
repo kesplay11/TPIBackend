@@ -4,10 +4,6 @@ const verifyRole = require('../../middlewares/verifyRole')
 const { emitNotification  } = require("../../services/websocket/websocket") 
 
 router.post("/", verifyRole([1,2]), async function(req, res, next){
-    console.log("=== DEBUG PUNTOS ===");
-    console.log("Body recibido:", req.body);
-    console.log("Usuario:", req.user);
-    console.log("=== FIN DEBUG ===");
     const { equipo_id, juego_ronda_id, puntos } = req.body;
     const usuario = req.user;
 
@@ -316,13 +312,15 @@ router.get("/", function (req, res, next) {
             jr.juego_ronda_id,
             jr.numero_ronda,
             ep.estado_punto_id,
-            ep.desc_estado_punto
+            ep.desc_estado_punto,
+            per.nombre AS nombre_capitan
         FROM puntos p
-        INNER JOIN equipos e ON p.equipo_id = e.equipo_id
-        INNER JOIN juegos_rondas jr ON p.juego_ronda_id = jr.juego_ronda_id
-        INNER JOIN juegos j ON jr.juego_id = j.juego_id
-        INNER JOIN categorias c ON j.categoria_id = c.categoria_id
+        INNER JOIN equipos e ON p.equipo_id = e.equipo_id AND e.borrado_logico = 0
+        INNER JOIN juegos_rondas jr ON p.juego_ronda_id = jr.juego_ronda_id AND jr.borrado_logico = 0
+        INNER JOIN juegos j ON jr.juego_id = j.juego_id AND j.borrado_logico = 0
+        INNER JOIN categorias c ON j.categoria_id = c.categoria_id AND c.borrado_logico = 0
         INNER JOIN estado_punto ep ON p.estado_punto_id = ep.estado_punto_id
+        INNER JOIN personas per ON p.capitan_id = per.persona_id
         WHERE p.borrado_logico = 0
     `;
 
@@ -334,16 +332,23 @@ router.get("/", function (req, res, next) {
         valores.push(estado, estado);
     }
 
-    // 🔍 Filtro opcional por texto (nombre del equipo, categoría o juego)
+    // 🔍 Filtro opcional por texto (nombre del equipo, categoría o capitán)
     if (busqueda) {
         sql += `
             AND (
                 e.nombre LIKE ?
                 OR c.nombre LIKE ?
-                OR j.juego_id LIKE ?
+                OR per.nombre LIKE ?
+                OR jr.numero_ronda LIKE ?
             )
         `;
-        valores.push(`%${busqueda}%`, `%${busqueda}%`, `%${busqueda}%`);
+        const busquedaPattern = `%${busqueda}%`;
+        valores.push(
+            busquedaPattern, 
+            busquedaPattern, 
+            busquedaPattern,
+            busquedaPattern
+        );
     }
 
     // 🕒 Ordenar del más reciente al más antiguo
@@ -356,13 +361,6 @@ router.get("/", function (req, res, next) {
             res.status(500).send("Ocurrió un error al obtener los puntos");
         });
 });
-
-
-
-
-
-
-// Agregar este endpoint en tu router de puntos (main.js)
 
 /**
  * GET /api/puntos/mis-puntos/rechazados

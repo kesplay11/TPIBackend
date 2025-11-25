@@ -12,13 +12,15 @@ router.get("/", function (req, res, next) {
         FROM equipos e
         LEFT JOIN rondas_equipos re ON e.equipo_id = re.equipo_id
         LEFT JOIN juegos_rondas jr ON re.juego_ronda_id = jr.juego_ronda_id
+            AND jr.borrado_logico = 0  -- 🟢 SOLO RONDAS NO BORRADAS
         LEFT JOIN juegos j ON jr.juego_id = j.juego_id
-            AND j.borrado_logico = 0
+            AND j.borrado_logico = 0   -- 🟢 SOLO JUEGOS NO BORRADOS
             AND j.estado_juego_id = ?
         LEFT JOIN puntos p ON 
             p.juego_ronda_id = jr.juego_ronda_id
-            AND p.equipo_id = e.equipo_id       -- 🟩 FILTRAMOS POR EQUIPO CORRECTO
-            AND p.borrado_logico = 0
+            AND p.equipo_id = e.equipo_id
+            AND p.borrado_logico = 0   -- 🟢 SOLO PUNTOS NO BORRADOS
+            AND p.estado_punto_id = 2  -- 🟢 SOLO PUNTOS CONFIRMADOS
         WHERE e.borrado_logico = 0
         GROUP BY e.equipo_id, e.nombre
         ORDER BY total_puntos DESC

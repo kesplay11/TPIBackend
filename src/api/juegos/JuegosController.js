@@ -4,9 +4,7 @@ async function obtenerResultadosPorJuego(req, res) {
     const { juego_id } = req.params;
 
     try {
-        //
         // 1️⃣ Traer TODAS las rondas del juego (solo activas)
-        //
         const [rondas] = await db.query(
             `
             SELECT 
@@ -102,7 +100,7 @@ const actualizarRonda = function (req, res, next) {
         const set1 = new Set(equipos1);
         const set2 = new Set(equipos2);
         return equipos1.length === equipos2.length && 
-               [...set1].every(id => set2.has(id));
+        [...set1].every(id => set2.has(id));
     };
 
     // Si mandaron 'equipos', verificamos si realmente cambiaron

@@ -84,14 +84,4 @@ router.put("/estado/:equipo_id", verifyRole([1]), function(req, res, next){
     })
 })
 
-//router.put("/eliminar/:equipo_id",function(req, res, next){})
-
-
-//ordenar como lo vamos a explicar, que vamos a explicar si nos vamos a presentar primero, explicar porque elegimos, jueves exposición final
-//armarse la lista, analisis foda evaluaresmo las fortalezas las vamos pulir, fortalzea Oportunidades, Ddebilidades, Amenazas, (si el porfe no nos pregunto esto)
-//pero si nos hubiera prguntado estabamos al horno
-//pensar para el jueves como una exposicion final
-//analisis foda antes y despues
-//documentacion a tener en cuenta la gramatica, y errores gramaticales
-//investigacion de campo, ir a visitar los espacios, ver diferentes paginas webs
 module.exports = router;

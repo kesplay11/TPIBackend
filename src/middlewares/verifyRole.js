@@ -6,7 +6,7 @@ return (req, res, next) => {
 
     if (!req.user) {
     return res.status(401).send('No autenticado');
-    }
+    } 
 
     const userRole = Number(req.user.rol_id);
     const allowed = allowedRoles.map(r => Number(r));
